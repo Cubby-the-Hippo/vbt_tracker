@@ -3,399 +3,347 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VBT Barbell Pod - Tracker Dashboard</title>
+  <title>VBT Velocity Dashboard</title>
   <style>
     :root {
-      --bg-color: #0f172a;
-      --card-bg: #1e293b;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
+      --bg-color: #0b0f19;
+      --card-bg: #161e2e;
+      --card-border: #243044;
       --accent-blue: #38bdf8;
       --accent-green: #22c55e;
-      --accent-red: #ef4444;
-      --accent-purple: #a855f7;
-      --border-color: #334155;
+      --accent-orange: #f97316;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background-color: var(--bg-color);
       color: var(--text-main);
       display: flex;
-      flex-direction: column;
-      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
       min-height: 100vh;
-      padding: 20px;
     }
 
-    .container {
+    .dashboard {
       width: 100%;
-      max-width: 500px;
+      max-width: 700px;
       display: flex;
       flex-direction: column;
+      gap: 20px;
+    }
+
+    .header-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
       gap: 16px;
     }
 
-    header {
-      text-align: center;
-    }
+    .title-group h1 { font-size: 1.5rem; font-weight: 800; }
+    .title-group p { font-size: 0.85rem; color: var(--text-muted); }
 
-    header h1 {
-      font-size: 1.8rem;
+    .controls-group { display: flex; align-items: center; gap: 12px; }
+
+    .status-pill {
+      font-size: 0.8rem;
       font-weight: 700;
-      color: var(--accent-blue);
-    }
-
-    header p {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      margin-top: 4px;
-    }
-
-    .mode-selector {
-      display: flex;
-      background-color: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 4px;
-      gap: 4px;
-    }
-
-    .mode-btn {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      border-radius: 6px;
-      background: none;
-      color: var(--text-muted);
-      font-weight: 600;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .mode-btn.active {
-      background-color: #334155;
-      color: var(--accent-blue);
-    }
-
-    .card {
-      background-color: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 15px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-    }
-
-    .status-badge {
-      font-size: 0.85rem;
-      font-weight: 600;
       padding: 6px 14px;
       border-radius: 20px;
-      background-color: #334155;
+      background: #1e293b;
       color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
     }
 
-    .status-badge.connected {
-      background-color: rgba(34, 197, 94, 0.2);
+    .status-pill.connected {
+      background: rgba(34, 197, 94, 0.15);
       color: var(--accent-green);
-      border: 1px solid var(--accent-green);
-    }
-
-    .status-badge.armed {
-      background-color: rgba(56, 189, 248, 0.2);
-      color: var(--accent-blue);
-      border: 1px solid var(--accent-blue);
-    }
-
-    .velocity-grid {
-      display: flex;
-      width: 100%;
-      justify-content: space-around;
-      text-align: center;
-      margin: 10px 0;
-    }
-
-    .velocity-box {
-      flex: 1;
-      opacity: 0.5;
-      transition: opacity 0.2s;
-    }
-
-    .velocity-box.primary {
-      opacity: 1;
-      transform: scale(1.05);
-    }
-
-    .velocity-value {
-      font-size: 3.2rem;
-      font-weight: 800;
-      line-height: 1;
-      color: var(--text-main);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .velocity-label {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-top: 6px;
-      font-weight: 600;
-      text-transform: uppercase;
+      border: 1px solid rgba(34, 197, 94, 0.3);
     }
 
     .btn {
-      width: 100%;
-      padding: 16px;
-      font-size: 1.1rem;
-      font-weight: 700;
+      background: var(--accent-blue);
+      color: #0b0f19;
       border: none;
-      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border-radius: 10px;
       cursor: pointer;
-      transition: all 0.2s ease;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
     }
 
-    .btn-connect {
-      background-color: var(--accent-blue);
-      color: #0f172a;
-    }
+    .btn-secondary { background: #334155; color: var(--text-main); }
 
-    .btn-arm {
-      background-color: var(--accent-green);
-      color: #0f172a;
-    }
-
-    .btn-arm:disabled {
-      background-color: #334155;
-      color: #64748b;
-      cursor: not-allowed;
-    }
-
-    .history-card {
-      width: 100%;
-    }
-
-    .history-card h3 {
-      font-size: 1rem;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-    }
-
-    .rep-list {
-      list-style: none;
-      width: 100%;
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
     }
 
-    .rep-item {
+    .card-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 16px;
       display: flex;
       justify-content: space-between;
-      padding: 10px 14px;
-      background-color: var(--bg-color);
-      border-radius: 6px;
-      font-size: 0.95rem;
-      border-left: 4px solid var(--accent-blue);
     }
 
-    .rep-item.fatigued {
-      border-left-color: var(--accent-red);
+    .rep-hero { text-align: center; padding: 10px 0 24px 0; }
+    .rep-count-label { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .rep-count-val {
+      font-size: 4.5rem;
+      font-weight: 900;
+      color: var(--accent-orange);
+      line-height: 1;
+      margin: 6px 0 20px 0;
+    }
+
+    .velocity-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .v-box {
+      background: #0b0f19;
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .v-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+    .v-val { font-size: 2.5rem; font-weight: 800; color: var(--accent-blue); }
+    .unit { font-size: 1rem; color: var(--text-muted); font-weight: 400; }
+
+    .table-container { max-height: 260px; overflow-y: auto; margin-top: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: left; }
+    th { color: var(--text-muted); padding: 10px 14px; border-bottom: 1px solid var(--card-border); font-weight: 600; }
+    td { padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+
+    .log-footer {
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      background: #0b0f19;
+      border-radius: 8px;
+      padding: 10px 14px;
+      height: 50px;
+      overflow-y: auto;
+      margin-top: 16px;
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <header>
-      <h1>VBT BARBELL POD</h1>
-      <p>Real-Time Velocity Based Training</p>
-    </header>
-
-    <div class="mode-selector">
-      <button id="btnGrind" class="mode-btn active">GRIND (MEAN VELO)</button>
-      <button id="btnBallistic" class="mode-btn">BALLISTIC (PEAK VELO)</button>
+  <div class="dashboard">
+    <!-- Header -->
+    <div class="header-card">
+      <div class="title-group">
+        <h1>VBT Velocity Tracker</h1>
+        <p>Live Barbell Kinetics & Telemetry</p>
+      </div>
+      <div class="controls-group">
+        <div id="statusBadge" class="status-pill">Disconnected</div>
+        <button id="connectBtn" class="btn" onclick="connectPod()">Connect Pod</button>
+        <button class="btn btn-secondary" onclick="resetSet()">Reset Set</button>
+      </div>
     </div>
 
+    <!-- Live Telemetry Card -->
     <div class="card">
-      <div id="statusBadge" class="status-badge">DISCONNECTED</div>
-      
+      <div class="card-title">Live Rep Metrics</div>
+      <div class="rep-hero">
+        <div class="rep-count-label">Current Set</div>
+        <div id="repCounter" class="rep-count-val">REP 0</div>
+      </div>
       <div class="velocity-grid">
-        <div id="boxMean" class="velocity-box primary">
-          <div id="meanVal" class="velocity-value">0.00</div>
-          <div class="velocity-label">Mean (m/s)</div>
+        <div class="v-box">
+          <div class="v-label">Peak Velocity</div>
+          <div class="v-val"><span id="peakVal">0.00</span> <span class="unit">m/s</span></div>
         </div>
-        <div id="boxPeak" class="velocity-box">
-          <div id="peakVal" class="velocity-value">0.00</div>
-          <div class="velocity-label">Peak (m/s)</div>
+        <div class="v-box">
+          <div class="v-label">Mean Velocity</div>
+          <div class="v-val"><span id="meanVal">0.00</span> <span class="unit">m/s</span></div>
         </div>
       </div>
-
-      <button id="btnConnect" class="btn btn-connect">Connect Pod</button>
-      <button id="btnArm" class="btn btn-arm" disabled>ARM FOR REP</button>
     </div>
 
-    <div class="card history-card">
-      <h3>REP LOG</h3>
-      <ul id="repList" class="rep-list"></ul>
+    <!-- Set History Log -->
+    <div class="card">
+      <div class="card-title">
+        Set Rep Log
+        <span id="setSummary" style="color: var(--accent-blue);">Avg Mean: 0.00 m/s</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Rep #</th>
+              <th>Peak Velocity</th>
+              <th>Mean Velocity</th>
+              <th>Velocity Loss</th>
+            </tr>
+          </thead>
+          <tbody id="historyTable">
+            <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No reps recorded yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="debugLog" class="log-footer">> System ready. Click "Connect Pod" to connect via Bluetooth...</div>
     </div>
   </div>
 
   <script>
-    const SERVICE_UUID = "0000180c-0000-1000-8000-00805f9b34fb";
-    const COMMAND_CHAR_UUID = "00002a57-0000-1000-8000-00805f9b34fb";
-    const VELOCITY_CHAR_UUID = "00002a56-0000-1000-8000-00805f9b34fb";
-
-    let bluetoothDevice = null;
-    let commandCharacteristic = null;
-    let velocityCharacteristic = null;
+    const SERVICE_UUID   = '19b10000-e8f2-537e-4f6c-d104768a1214';
+    const PEAK_CHAR_UUID = '19b10001-e8f2-537e-4f6c-d104768a1214';
+    const MEAN_CHAR_UUID = '19b10002-e8f2-537e-4f6c-d104768a1214';
 
     let repCount = 0;
-    let bestVelocity = 0;
-    let currentMode = "mean"; // 'mean' or 'peak'
+    let repHistory = [];
+    let firstRepPeak = 0;
+    let currentPeak = 0.0;
+    let currentMean = 0.0;
+    let lastRepTime = 0;
 
-    const statusBadge = document.getElementById("statusBadge");
-    const meanVal = document.getElementById("meanVal");
-    const peakVal = document.getElementById("peakVal");
-    const boxMean = document.getElementById("boxMean");
-    const boxPeak = document.getElementById("boxPeak");
-    const btnConnect = document.getElementById("btnConnect");
-    const btnArm = document.getElementById("btnArm");
-    const btnGrind = document.getElementById("btnGrind");
-    const btnBallistic = document.getElementById("btnBallistic");
-    const repList = document.getElementById("repList");
-
-    btnGrind.addEventListener("click", () => setMode("mean"));
-    btnBallistic.addEventListener("click", () => setMode("peak"));
-
-    function setMode(mode) {
-      currentMode = mode;
-      bestVelocity = 0; // Reset baseline reference on mode switch
-      if (mode === "mean") {
-        btnGrind.classList.add("active");
-        btnBallistic.classList.remove("active");
-        boxMean.classList.add("primary");
-        boxPeak.classList.remove("primary");
-      } else {
-        btnBallistic.classList.add("active");
-        btnGrind.classList.remove("active");
-        boxPeak.classList.add("primary");
-        boxMean.classList.remove("primary");
-      }
+    function log(msg) {
+      const box = document.getElementById('debugLog');
+      box.innerHTML += `<div>> ${msg}</div>`;
+      box.scrollTop = box.scrollHeight;
+      console.log(msg);
     }
 
-    btnConnect.addEventListener("click", async () => {
-      if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-        disconnect();
-      } else {
-        connect();
+    async function connectPod() {
+      if (!navigator.bluetooth) {
+        alert("Please use Google Chrome!");
+        return;
       }
-    });
 
-    btnArm.addEventListener("click", async () => {
-      if (commandCharacteristic) {
-        try {
-          const buffer = new Uint8Array([1]);
-          await commandCharacteristic.writeValue(buffer);
-          statusBadge.textContent = "ARMED - PERFORM REP";
-          statusBadge.className = "status-badge armed";
-          btnArm.disabled = true;
-        } catch (err) {
-          console.error("Arming failed:", err);
-        }
-      }
-    });
-
-    async function connect() {
       try {
-        statusBadge.textContent = "SEARCHING...";
-        bluetoothDevice = await navigator.bluetooth.requestDevice({
-          filters: [{ name: "DIY_VBT_Pod" }],
+        log("Scanning for VBT-Barbell-Pod...");
+        const device = await navigator.bluetooth.requestDevice({
+          filters: [
+            { namePrefix: 'VBT' },
+            { name: 'VBT-Barbell-Pod' }
+          ],
           optionalServices: [SERVICE_UUID]
         });
 
-        bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+        log(`Connecting to ${device.name}...`);
+        document.getElementById('statusBadge').innerText = "Connecting...";
 
-        const server = await bluetoothDevice.gatt.connect();
+        device.addEventListener('gattserverdisconnected', onDisconnected);
+        const server = await device.gatt.connect();
         const service = await server.getPrimaryService(SERVICE_UUID);
-        
-        commandCharacteristic = await service.getCharacteristic(COMMAND_CHAR_UUID);
-        velocityCharacteristic = await service.getCharacteristic(VELOCITY_CHAR_UUID);
 
-        await velocityCharacteristic.startNotifications();
-        velocityCharacteristic.addEventListener('characteristicvaluechanged', handleVelocityData);
+        const peakChar = await service.getCharacteristic(PEAK_CHAR_UUID);
+        await peakChar.startNotifications();
+        peakChar.addEventListener('characteristicvaluechanged', handlePeakUpdate);
 
-        statusBadge.textContent = "CONNECTED";
-        statusBadge.className = "status-badge connected";
-        btnConnect.textContent = "Disconnect Pod";
-        btnArm.disabled = false;
+        const meanChar = await service.getCharacteristic(MEAN_CHAR_UUID);
+        await meanChar.startNotifications();
+        meanChar.addEventListener('characteristicvaluechanged', handleMeanUpdate);
+
+        document.getElementById('statusBadge').innerText = "Connected";
+        document.getElementById('statusBadge').classList.add("connected");
+        document.getElementById('connectBtn').innerText = "Pod Connected";
+        document.getElementById('connectBtn').disabled = true;
+        log("Connected! Upward rep tracking active.");
+
       } catch (err) {
-        console.error("Connection failed:", err);
-        statusBadge.textContent = "DISCONNECTED";
-        statusBadge.className = "status-badge";
+        log(`Error: ${err.message || err}`);
+        document.getElementById('statusBadge').innerText = "Disconnected";
       }
     }
 
-    function handleVelocityData(event) {
-      const decoder = new TextDecoder('utf-8');
-      const payload = decoder.decode(event.target.value); // Formatted "PEAK,MEAN"
-      const parts = payload.split(",");
+    function handlePeakUpdate(event) {
+      currentPeak = event.target.value.getFloat32(0, true);
+      document.getElementById('peakVal').innerText = currentPeak.toFixed(2);
+    }
 
-      if (parts.length === 2) {
-        const peak = parseFloat(parts[0]);
-        const mean = parseFloat(parts[1]);
+    function handleMeanUpdate(event) {
+      currentMean = event.target.value.getFloat32(0, true);
+      document.getElementById('meanVal').innerText = currentMean.toFixed(2);
+      
+      // Strict frontend filter: block duplicate signals within 750ms window
+      const now = Date.now();
+      if (now - lastRepTime > 750) {
+        lastRepTime = now;
+        recordRep(currentPeak, currentMean);
+      }
+    }
 
-        peakVal.textContent = peak.toFixed(2);
-        meanVal.textContent = mean.toFixed(2);
+    function recordRep(peak, mean) {
+      repCount++;
+      if (repCount === 1) firstRepPeak = peak;
 
-        repCount++;
-        const targetVal = currentMode === "mean" ? mean : peak;
+      const velLoss = (firstRepPeak > 0) ? (((firstRepPeak - peak) / firstRepPeak) * 100).toFixed(1) : "0.0";
+      repHistory.push({ rep: repCount, peak: peak, mean: mean, loss: velLoss });
 
-        if (repCount === 1 || targetVal > bestVelocity) {
-          bestVelocity = targetVal;
-        }
+      document.getElementById('repCounter').innerText = `REP ${repCount}`;
+      log(`REP #${repCount} LOGGED: Peak ${peak.toFixed(2)} m/s | Mean ${mean.toFixed(2)} m/s`);
 
-        const velLossPct = ((bestVelocity - targetVal) / bestVelocity) * 100;
-        const isFatigued = velLossPct >= 20.0;
+      renderTable();
+    }
 
-        const li = document.createElement("li");
-        li.className = `rep-item ${isFatigued ? 'fatigued' : ''}`;
-        li.innerHTML = `
-          <span>Rep ${repCount}</span>
-          <strong>Mean: ${mean.toFixed(2)} | Peak: ${peak.toFixed(2)} m/s ${isFatigued ? '(Drop >20%)' : ''}</strong>
+    function renderTable() {
+      const tbody = document.getElementById('historyTable');
+      tbody.innerHTML = '';
+      let totalMean = 0;
+
+      repHistory.forEach(r => {
+        totalMean += r.mean;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>#${r.rep}</strong></td>
+          <td style="color: var(--accent-blue);">${r.peak.toFixed(2)} m/s</td>
+          <td>${r.mean.toFixed(2)} m/s</td>
+          <td style="color: ${r.loss > 20 ? 'var(--accent-orange)' : 'var(--text-main)'};">${r.loss}%</td>
         `;
-        repList.prepend(li);
+        tbody.appendChild(tr);
+      });
 
-        statusBadge.textContent = "CONNECTED";
-        statusBadge.className = "status-badge connected";
-        btnArm.disabled = false;
-      }
+      const avgMean = (repHistory.length > 0) ? (totalMean / repHistory.length).toFixed(2) : "0.00";
+      document.getElementById('setSummary').innerText = `Avg Mean: ${avgMean} m/s`;
     }
 
-    function disconnect() {
-      if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-        bluetoothDevice.gatt.disconnect();
-      }
+    function resetSet() {
+      repCount = 0;
+      repHistory = [];
+      firstRepPeak = 0;
+      document.getElementById('repCounter').innerText = "REP 0";
+      document.getElementById('peakVal').innerText = "0.00";
+      document.getElementById('meanVal').innerText = "0.00";
+      document.getElementById('historyTable').innerHTML = `
+        <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No reps recorded yet.</td></tr>
+      `;
+      document.getElementById('setSummary').innerText = "Avg Mean: 0.00 m/s";
+      log("Set reset.");
     }
 
     function onDisconnected() {
-      statusBadge.textContent = "DISCONNECTED";
-      statusBadge.className = "status-badge";
-      btnConnect.textContent = "Connect Pod";
-      btnArm.disabled = true;
+      document.getElementById('statusBadge').innerText = "Disconnected";
+      document.getElementById('statusBadge').classList.remove("connected");
+      document.getElementById('connectBtn').innerText = "Connect Pod";
+      document.getElementById('connectBtn').disabled = false;
+      log("Pod disconnected.");
     }
   </script>
 </body>
