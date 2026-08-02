@@ -285,7 +285,7 @@
         document.getElementById('statusBadge').classList.add("connected");
         document.getElementById('connectBtn').innerText = "Pod Connected";
         document.getElementById('connectBtn').disabled = true;
-        log("Connected! Upward rep tracking active.");
+        log("Connected! Noise gate active (>0.15 m/s threshold).");
 
       } catch (err) {
         log(`Error: ${err.message || err}`);
@@ -295,16 +295,22 @@
 
     function handlePeakUpdate(event) {
       currentPeak = event.target.value.getFloat32(0, true);
-      document.getElementById('peakVal').innerText = currentPeak.toFixed(2);
     }
 
     function handleMeanUpdate(event) {
       currentMean = event.target.value.getFloat32(0, true);
-      document.getElementById('meanVal').innerText = currentMean.toFixed(2);
       
+      // HARD NOISE GATE: Reject fake 0.05 m/s micro-movements
+      if (currentPeak < 0.15) {
+        log(`Ignored noise spike: Peak was only ${currentPeak.toFixed(2)} m/s.`);
+        return;
+      }
+
       const now = Date.now();
-      if (now - lastRepTime > 750) {
+      if (now - lastRepTime > 600) {
         lastRepTime = now;
+        document.getElementById('peakVal').innerText = currentPeak.toFixed(2);
+        document.getElementById('meanVal').innerText = currentMean.toFixed(2);
         recordRep(currentPeak, currentMean);
       }
     }
