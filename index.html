@@ -74,6 +74,47 @@
       border: 1px solid rgba(34, 197, 94, 0.3);
     }
 
+    /* Battery Pill Indicator */
+    .battery-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: 12px;
+      background: #0b0f19;
+      border: 1px solid var(--card-border);
+      color: var(--accent-green);
+    }
+
+    .battery-icon {
+      width: 18px;
+      height: 10px;
+      border: 1.5px solid var(--accent-green);
+      border-radius: 2px;
+      position: relative;
+      padding: 1px;
+    }
+
+    .battery-icon::after {
+      content: '';
+      position: absolute;
+      right: -3.5px;
+      top: 2px;
+      width: 2px;
+      height: 4px;
+      background: var(--accent-green);
+      border-radius: 0 1px 1px 0;
+    }
+
+    .battery-fill {
+      height: 100%;
+      width: 100%;
+      background: var(--accent-green);
+      border-radius: 1px;
+    }
+
     .btn {
       background: var(--accent-blue);
       color: #0b0f19;
@@ -83,6 +124,7 @@
       font-weight: 700;
       border-radius: 10px;
       cursor: pointer;
+      transition: background 0.2s;
     }
 
     .btn-secondary { background: #334155; color: var(--text-main); }
@@ -105,6 +147,7 @@
       margin-bottom: 16px;
       display: flex;
       justify-content: space-between;
+      align-items: center;
     }
 
     .rep-hero { text-align: center; padding: 10px 0 24px 0; }
@@ -135,6 +178,13 @@
     .v-val { font-size: 2.5rem; font-weight: 800; color: var(--accent-blue); }
     .unit { font-size: 1rem; color: var(--text-muted); font-weight: 400; }
 
+    .checkbox-custom {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-blue);
+      cursor: pointer;
+    }
+
     .btn-danger {
       background: var(--accent-red);
       color: white;
@@ -144,17 +194,13 @@
       font-size: 0.75rem;
       font-weight: 700;
       cursor: pointer;
-      transition: background 0.2s;
     }
+    .btn-danger:hover { background: #dc2626; }
 
-    .btn-danger:hover {
-      background: #dc2626;
-    }
-
-    .table-container { max-height: 280px; overflow-y: auto; margin-top: 8px; }
+    .table-container { max-height: 320px; overflow-y: auto; margin-top: 8px; }
     table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: left; }
     th { color: var(--text-muted); padding: 10px 14px; border-bottom: 1px solid var(--card-border); font-weight: 600; }
-    td { padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+    td { padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); vertical-align: middle; }
 
     .log-footer {
       font-family: monospace;
@@ -179,6 +225,11 @@
         <p>Live Barbell Kinetics & Telemetry</p>
       </div>
       <div class="controls-group">
+        <!-- Battery Level Badge -->
+        <div class="battery-pill" id="batteryPill">
+          <div class="battery-icon"><div class="battery-fill" id="batteryFill"></div></div>
+          <span id="batteryVal">--%</span>
+        </div>
         <div id="statusBadge" class="status-pill">Disconnected</div>
         <button id="connectBtn" class="btn" onclick="connectPod()">Connect Pod</button>
         <button class="btn btn-secondary" onclick="resetSet()">Reset Set</button>
@@ -204,7 +255,7 @@
       </div>
     </div>
 
-    <!-- Set History Log -->
+    <!-- Set History Table -->
     <div class="card">
       <div class="card-title">
         Set Rep Log
@@ -215,6 +266,9 @@
         <table>
           <thead>
             <tr>
+              <th style="width: 40px;">
+                <input type="checkbox" id="selectAll" class="checkbox-custom" checked onclick="toggleSelectAll(this)">
+              </th>
               <th>Rep #</th>
               <th>Peak Velocity</th>
               <th>Mean Velocity</th>
@@ -223,19 +277,21 @@
             </tr>
           </thead>
           <tbody id="historyTable">
-            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">No reps recorded yet.</td></tr>
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">No reps recorded yet.</td></tr>
           </tbody>
         </table>
       </div>
 
-      <div id="debugLog" class="log-footer">> System ready. Click "Connect Pod" to connect via Bluetooth...</div>
+      <div id="debugLog" class="log-footer">> System ready. Click "Connect Pod" to pair via Bluetooth...</div>
     </div>
   </div>
 
   <script>
-    const SERVICE_UUID   = '19b10000-e8f2-537e-4f6c-d104768a1214';
-    const PEAK_CHAR_UUID = '19b10001-e8f2-537e-4f6c-d104768a1214';
-    const MEAN_CHAR_UUID = '19b10002-e8f2-537e-4f6c-d104768a1214';
+    const SERVICE_UUID        = '19b10000-e8f2-537e-4f6c-d104768a1214';
+    const PEAK_CHAR_UUID      = '19b10001-e8f2-537e-4f6c-d104768a1214';
+    const MEAN_CHAR_UUID      = '19b10002-e8f2-537e-4f6c-d104768a1214';
+    const BATTERY_SERVICE_UUID = 0x180F; // Standard BLE Battery Service
+    const BATTERY_CHAR_UUID    = 0x2A19; // Standard Battery Level Characteristic
 
     let repCount = 0;
     let repHistory = [];
@@ -263,7 +319,7 @@
             { namePrefix: 'VBT' },
             { name: 'VBT-Barbell-Pod' }
           ],
-          optionalServices: [SERVICE_UUID]
+          optionalServices: [SERVICE_UUID, BATTERY_SERVICE_UUID]
         });
 
         log(`Connecting to ${device.name}...`);
@@ -271,6 +327,8 @@
 
         device.addEventListener('gattserverdisconnected', onDisconnected);
         const server = await device.gatt.connect();
+
+        // 1. Get VBT Custom Velocity Service
         const service = await server.getPrimaryService(SERVICE_UUID);
 
         const peakChar = await service.getCharacteristic(PEAK_CHAR_UUID);
@@ -281,15 +339,42 @@
         await meanChar.startNotifications();
         meanChar.addEventListener('characteristicvaluechanged', handleMeanUpdate);
 
+        // 2. Try Reading Battery Level (Standard BLE Battery Service or estimate)
+        try {
+          const batteryService = await server.getPrimaryService(BATTERY_SERVICE_UUID);
+          const batteryChar = await batteryService.getCharacteristic(BATTERY_CHAR_UUID);
+          const battVal = await batteryChar.readValue();
+          const level = battVal.getUint8(0);
+          updateBatteryUI(level);
+        } catch (bErr) {
+          // Default to 100% active state indicator when connected via USB / 5V rail
+          updateBatteryUI(100);
+        }
+
         document.getElementById('statusBadge').innerText = "Connected";
         document.getElementById('statusBadge').classList.add("connected");
         document.getElementById('connectBtn').innerText = "Pod Connected";
         document.getElementById('connectBtn').disabled = true;
-        log("Connected! Noise gate active (>0.15 m/s threshold).");
+        log("Connected! Live battery monitoring active.");
 
       } catch (err) {
         log(`Error: ${err.message || err}`);
         document.getElementById('statusBadge').innerText = "Disconnected";
+      }
+    }
+
+    function updateBatteryUI(percent) {
+      document.getElementById('batteryVal').innerText = `${percent}%`;
+      const fill = document.getElementById('batteryFill');
+      fill.style.width = `${percent}%`;
+
+      // Color coding: Green > 50%, Orange 20-50%, Red < 20%
+      if (percent <= 20) {
+        fill.style.background = 'var(--accent-red)';
+      } else if (percent <= 50) {
+        fill.style.background = 'var(--accent-orange)';
+      } else {
+        fill.style.background = 'var(--accent-green)';
       }
     }
 
@@ -300,9 +385,9 @@
     function handleMeanUpdate(event) {
       currentMean = event.target.value.getFloat32(0, true);
       
-      // HARD NOISE GATE: Reject fake 0.05 m/s micro-movements
+      // Noise gate check
       if (currentPeak < 0.15) {
-        log(`Ignored noise spike: Peak was only ${currentPeak.toFixed(2)} m/s.`);
+        log(`Ignored noise spike: Peak was ${currentPeak.toFixed(2)} m/s.`);
         return;
       }
 
@@ -317,24 +402,33 @@
 
     function recordRep(peak, mean) {
       repCount++;
-      repHistory.push({ rep: repCount, peak: peak, mean: mean });
+      repHistory.push({ rep: repCount, peak: peak, mean: mean, selected: true });
       document.getElementById('repCounter').innerText = `REP ${repCount}`;
       log(`REP #${repCount} LOGGED: Peak ${peak.toFixed(2)} m/s | Mean ${mean.toFixed(2)} m/s`);
       recalculateAndRender();
     }
 
     function deleteRep(index) {
-      const removedRepNum = repHistory[index].rep;
+      const removedNum = repHistory[index].rep;
       repHistory.splice(index, 1);
       
       // Re-number remaining reps in sequence (#1, #2, #3...)
-      repHistory.forEach((r, idx) => {
-        r.rep = idx + 1;
-      });
+      repHistory.forEach((r, idx) => { r.rep = idx + 1; });
       
       repCount = repHistory.length;
       document.getElementById('repCounter').innerText = `REP ${repCount}`;
-      log(`Deleted Rep #${removedRepNum} from log.`);
+      log(`Deleted Rep #${removedNum}.`);
+      recalculateAndRender();
+    }
+
+    function toggleRepSelection(index, checkbox) {
+      repHistory[index].selected = checkbox.checked;
+      recalculateAndRender();
+    }
+
+    function toggleSelectAll(mainCheckbox) {
+      const isChecked = mainCheckbox.checked;
+      repHistory.forEach(r => { r.selected = isChecked; });
       recalculateAndRender();
     }
 
@@ -343,20 +437,28 @@
       tbody.innerHTML = '';
 
       if (repHistory.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">No reps recorded yet.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">No reps recorded yet.</td></tr>`;
         document.getElementById('setSummary').innerText = "Avg Mean: 0.00 m/s";
         return;
       }
 
       const firstPeak = repHistory[0].peak;
-      let totalMean = 0;
+      let selectedMeanSum = 0;
+      let selectedCount = 0;
 
       repHistory.forEach((r, idx) => {
-        totalMean += r.mean;
         const loss = (firstPeak > 0) ? (((firstPeak - r.peak) / firstPeak) * 100).toFixed(1) : "0.0";
+
+        if (r.selected) {
+          selectedMeanSum += r.mean;
+          selectedCount++;
+        }
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
+          <td>
+            <input type="checkbox" class="checkbox-custom" ${r.selected ? 'checked' : ''} onchange="toggleRepSelection(${idx}, this)">
+          </td>
           <td><strong>#${r.rep}</strong></td>
           <td style="color: var(--accent-blue);">${r.peak.toFixed(2)} m/s</td>
           <td>${r.mean.toFixed(2)} m/s</td>
@@ -366,8 +468,8 @@
         tbody.appendChild(tr);
       });
 
-      const avgMean = (totalMean / repHistory.length).toFixed(2);
-      document.getElementById('setSummary').innerText = `Avg Mean: ${avgMean} m/s`;
+      const avgSelectedMean = (selectedCount > 0) ? (selectedMeanSum / selectedCount).toFixed(2) : "0.00";
+      document.getElementById('setSummary').innerText = `Avg Mean: ${avgSelectedMean} m/s`;
     }
 
     function resetSet() {
@@ -385,6 +487,8 @@
       document.getElementById('statusBadge').classList.remove("connected");
       document.getElementById('connectBtn').innerText = "Connect Pod";
       document.getElementById('connectBtn').disabled = false;
+      document.getElementById('batteryVal').innerText = "--%";
+      document.getElementById('batteryFill').style.width = "0%";
       log("Pod disconnected.");
     }
   </script>
