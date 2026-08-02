@@ -12,6 +12,7 @@
       --accent-blue: #38bdf8;
       --accent-green: #22c55e;
       --accent-orange: #f97316;
+      --accent-red: #ef4444;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
     }
@@ -34,7 +35,7 @@
 
     .dashboard {
       width: 100%;
-      max-width: 700px;
+      max-width: 750px;
       display: flex;
       flex-direction: column;
       gap: 20px;
@@ -85,6 +86,7 @@
     }
 
     .btn-secondary { background: #334155; color: var(--text-main); }
+    .btn-secondary:hover { background: #475569; }
 
     .card {
       background: var(--card-bg);
@@ -133,7 +135,23 @@
     .v-val { font-size: 2.5rem; font-weight: 800; color: var(--accent-blue); }
     .unit { font-size: 1rem; color: var(--text-muted); font-weight: 400; }
 
-    .table-container { max-height: 260px; overflow-y: auto; margin-top: 8px; }
+    .btn-danger {
+      background: var(--accent-red);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+
+    .table-container { max-height: 280px; overflow-y: auto; margin-top: 8px; }
     table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: left; }
     th { color: var(--text-muted); padding: 10px 14px; border-bottom: 1px solid var(--card-border); font-weight: 600; }
     td { padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
@@ -192,6 +210,7 @@
         Set Rep Log
         <span id="setSummary" style="color: var(--accent-blue);">Avg Mean: 0.00 m/s</span>
       </div>
+
       <div class="table-container">
         <table>
           <thead>
@@ -200,13 +219,15 @@
               <th>Peak Velocity</th>
               <th>Mean Velocity</th>
               <th>Velocity Loss</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody id="historyTable">
-            <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No reps recorded yet.</td></tr>
+            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">No reps recorded yet.</td></tr>
           </tbody>
         </table>
       </div>
+
       <div id="debugLog" class="log-footer">> System ready. Click "Connect Pod" to connect via Bluetooth...</div>
     </div>
   </div>
@@ -218,7 +239,6 @@
 
     let repCount = 0;
     let repHistory = [];
-    let firstRepPeak = 0;
     let currentPeak = 0.0;
     let currentMean = 0.0;
     let lastRepTime = 0;
@@ -282,7 +302,6 @@
       currentMean = event.target.value.getFloat32(0, true);
       document.getElementById('meanVal').innerText = currentMean.toFixed(2);
       
-      // Strict frontend filter: block duplicate signals within 750ms window
       const now = Date.now();
       if (now - lastRepTime > 750) {
         lastRepTime = now;
@@ -292,49 +311,66 @@
 
     function recordRep(peak, mean) {
       repCount++;
-      if (repCount === 1) firstRepPeak = peak;
-
-      const velLoss = (firstRepPeak > 0) ? (((firstRepPeak - peak) / firstRepPeak) * 100).toFixed(1) : "0.0";
-      repHistory.push({ rep: repCount, peak: peak, mean: mean, loss: velLoss });
-
+      repHistory.push({ rep: repCount, peak: peak, mean: mean });
       document.getElementById('repCounter').innerText = `REP ${repCount}`;
       log(`REP #${repCount} LOGGED: Peak ${peak.toFixed(2)} m/s | Mean ${mean.toFixed(2)} m/s`);
-
-      renderTable();
+      recalculateAndRender();
     }
 
-    function renderTable() {
+    function deleteRep(index) {
+      const removedRepNum = repHistory[index].rep;
+      repHistory.splice(index, 1);
+      
+      // Re-number remaining reps in sequence (#1, #2, #3...)
+      repHistory.forEach((r, idx) => {
+        r.rep = idx + 1;
+      });
+      
+      repCount = repHistory.length;
+      document.getElementById('repCounter').innerText = `REP ${repCount}`;
+      log(`Deleted Rep #${removedRepNum} from log.`);
+      recalculateAndRender();
+    }
+
+    function recalculateAndRender() {
       const tbody = document.getElementById('historyTable');
       tbody.innerHTML = '';
+
+      if (repHistory.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">No reps recorded yet.</td></tr>`;
+        document.getElementById('setSummary').innerText = "Avg Mean: 0.00 m/s";
+        return;
+      }
+
+      const firstPeak = repHistory[0].peak;
       let totalMean = 0;
 
-      repHistory.forEach(r => {
+      repHistory.forEach((r, idx) => {
         totalMean += r.mean;
+        const loss = (firstPeak > 0) ? (((firstPeak - r.peak) / firstPeak) * 100).toFixed(1) : "0.0";
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong>#${r.rep}</strong></td>
           <td style="color: var(--accent-blue);">${r.peak.toFixed(2)} m/s</td>
           <td>${r.mean.toFixed(2)} m/s</td>
-          <td style="color: ${r.loss > 20 ? 'var(--accent-orange)' : 'var(--text-main)'};">${r.loss}%</td>
+          <td style="color: ${loss > 20 ? 'var(--accent-orange)' : 'var(--text-main)'};">${loss}%</td>
+          <td><button class="btn-danger" onclick="deleteRep(${idx})">Delete</button></td>
         `;
         tbody.appendChild(tr);
       });
 
-      const avgMean = (repHistory.length > 0) ? (totalMean / repHistory.length).toFixed(2) : "0.00";
+      const avgMean = (totalMean / repHistory.length).toFixed(2);
       document.getElementById('setSummary').innerText = `Avg Mean: ${avgMean} m/s`;
     }
 
     function resetSet() {
       repCount = 0;
       repHistory = [];
-      firstRepPeak = 0;
       document.getElementById('repCounter').innerText = "REP 0";
       document.getElementById('peakVal').innerText = "0.00";
       document.getElementById('meanVal').innerText = "0.00";
-      document.getElementById('historyTable').innerHTML = `
-        <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No reps recorded yet.</td></tr>
-      `;
-      document.getElementById('setSummary').innerText = "Avg Mean: 0.00 m/s";
+      recalculateAndRender();
       log("Set reset.");
     }
 
